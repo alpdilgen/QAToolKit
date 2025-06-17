@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import io
 
 # Import all functions from the single toolkit file
 try:
@@ -12,8 +11,7 @@ try:
 except ImportError as e:
     st.error(f"""
     **Error loading tool modules: {e}**
-    This usually means the `Tools` folder or its `__init__.py` file is missing from your GitHub repository.
-    Please ensure your repository structure is correct.
+    Please ensure your repository has a `Tools` folder with `__init__.py` and `toolkit_functions.py` files.
     """)
     st.stop()
 
@@ -58,13 +56,12 @@ elif tool_selection == "TMX Cleaner (Semantic)":
 
     if uploaded_file:
         if st.button("Clean TMX File", key="tmx_clean_button"):
-            # DO NOT DECODE HERE. Pass the raw buffer to the function.
-            with st.spinner("Processing file..."):
+            # Pass the raw buffer to the function to handle encoding correctly
+            with st.spinner("Processing file with semantic analysis... This may take a moment."):
                 cleaned_content, report = clean_tmx_content(uploaded_file, similarity_threshold)
                 st.success("TMX file processed!")
                 st.subheader("Processing Report")
                 st.text_area("Report", report, height=200)
-
             st.download_button("Download Cleaned TMX", cleaned_content, f"cleaned_{uploaded_file.name}", "application/xml")
 
 # --- 2. MQXLIFF Error Splitter Tool ---
@@ -83,7 +80,12 @@ elif tool_selection == "MQXLIFF Error Splitter":
                     st.success("File successfully split!")
                     st.subheader("Processing Report")
                     st.text_area("Report", report, height=200)
-                    st.download_button("Download Split Files (.zip)", zip_bytes, f"split_{uploaded_file.name.replace('.mqxliff', '.zip')}", "application/zip")
+                    st.download_button(
+                       label="Download Split Files (.zip)",
+                       data=zip_bytes,
+                       file_name=f"split_errors_{uploaded_file.name.replace('.mqxliff', '.zip')}",
+                       mime="application/zip"
+                    )
                 else:
                     st.error(report)
 
@@ -100,7 +102,6 @@ elif tool_selection == "General QA Resolver":
         if st.button("Apply QA Fixes"):
             options = {"fix_double_spaces": fix_spaces}
             with st.spinner("Applying QA rules..."):
-                # Pass the raw buffer directly
                 resolved_content, report = run_full_qa(uploaded_file, options)
                 st.success("Automated QA fixes complete!")
                 st.subheader("Changes Report")
