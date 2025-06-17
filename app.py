@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 
 # Araçlarımızı tools klasöründen import ediyoruz
-# Bu importların çalışabilmesi için tools/__init__.py dosyasının var olması şarttır.
-from tools.tmx_cleaner_tool import clean_tmx_content
-from tools.mqxliff_splitter_tool import split_mqxliff_content
-from tools.qa_resolver_tool import resolve_qa_issues
-from tools.qa_toolkit_tool import run_qa_toolkit
+# Hatanın çözümü için import yolu "Tools" olarak güncellendi
+from Tools.tmx_cleaner_tool import clean_tmx_content
+from Tools.mqxliff_splitter_tool import split_mqxliff_content
+from Tools.qa_resolver_tool import resolve_qa_issues
+from Tools.qa_toolkit_tool import run_qa_toolkit
 
 # --- Sayfa Ayarları ve Başlık ---
 st.set_page_config(
