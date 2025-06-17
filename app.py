@@ -1,19 +1,21 @@
 import streamlit as st
 import pandas as pd
-import io
 
-# Tüm araç fonksiyonlarını import ediyoruz
+# Import all functions from the single toolkit file
 try:
-    from Tools.tmx_cleaner_tool import clean_tmx_content
-    from Tools.qa_tools import fix_terminology_and_consistency
-    from Tools.mqxliff_splitter_tool import split_mqxliff_content
-    # from Tools.qa_resolver_tool import resolve_qa_issues # Bu araç henüz eklenmedi
+    from Tools.toolkit_functions import (
+        clean_tmx_content, 
+        split_mqxliff_content,
+        run_full_qa
+    )
 except ImportError as e:
-    st.error(f"Error loading modules from 'Tools' folder: {e}. Please ensure the folder and its `__init__.py` file exist in your GitHub repository.")
+    st.error(f"""
+    **Error loading tool modules: {e}**
+    Please ensure your repository has a `Tools` folder with `__init__.py` and `toolkit_functions.py` files.
+    """)
     st.stop()
 
-
-# --- Sayfa Ayarları ve Başlık ---
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Anova QA Toolkit",
     page_icon="🛠️",
@@ -21,28 +23,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- Main Title ---
 st.title("🛠️ Anova QA & Translation Toolkit")
 st.markdown("A centralized panel for automated translation and Quality Assurance tasks.")
 
-# --- KENAR ÇUBUĞU - ARAÇ SEÇİM MENÜSÜ (Tümü Dahil) ---
+# --- Sidebar for Tool Selection ---
 st.sidebar.title("Available Tools")
 tool_selection = st.sidebar.selectbox(
     "Please select a tool to use:",
     [
         "--- Select a Tool ---",
         "TMX Cleaner (Semantic)",
-        "Terminology & Consistency QA (AI)",
         "MQXLIFF Error Splitter",
+        "General QA Resolver",
+        "Advanced QA Toolkit (AI)"
     ],
     key="tool_selector"
 )
 
-# --- ANA EKRAN ---
+# --- Tool Interfaces ---
 
 if tool_selection == "--- Select a Tool ---":
     st.info("Welcome! Please select a tool from the left sidebar to begin.")
 
-# --- 1. TMX Temizleyici Arayüzü ---
+# --- 1. TMX Cleaner Tool ---
 elif tool_selection == "TMX Cleaner (Semantic)":
     st.header("TMX Cleaner with Semantic Analysis")
     st.write("This tool removes duplicate segments and cleans misaligned translation units from a .tmx file based on semantic similarity.")
@@ -52,46 +56,15 @@ elif tool_selection == "TMX Cleaner (Semantic)":
 
     if uploaded_file:
         if st.button("Clean TMX File", key="tmx_clean_button"):
-            with st.spinner("Processing file... This may take a moment."):
+            with st.spinner("Processing file with semantic analysis... This may take a moment."):
                 tmx_content_str = uploaded_file.getvalue().decode("utf-8")
                 cleaned_content, report = clean_tmx_content(tmx_content_str, similarity_threshold)
                 st.success("TMX file processed!")
                 st.subheader("Processing Report")
                 st.text_area("Report", report, height=200)
-
             st.download_button("Download Cleaned TMX File", cleaned_content, f"cleaned_{uploaded_file.name}", "application/xml")
 
-# --- 2. Terminoloji & Tutarlılık QA Aracı ---
-elif tool_selection == "Terminology & Consistency QA (AI)":
-    st.header("AI-Powered Terminology & Consistency QA")
-    st.write("This tool analyzes an XLIFF file against a termbase and uses an AI model to automatically correct terminology and consistency errors.")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        xliff_file = st.file_uploader("Upload your XLIFF file", type=["xliff", "sdlxliff", "mqxliff"], key="xliff_uploader")
-    with col2:
-        termbase_file = st.file_uploader("Upload your Termbase file (.xlsx)", type=["xlsx"], key="termbase_uploader")
-
-    if xliff_file and termbase_file:
-        if "OPENAI_API_KEY" not in st.secrets:
-            st.error("OpenAI API key is not configured. Please add it to your Streamlit secrets.")
-        else:
-            if st.button("Find & Fix Errors", key="term_fix_button"):
-                with st.spinner("AI is analyzing your file... This can take some time."):
-                    xliff_content_str = xliff_file.getvalue().decode("utf-8")
-                    termbase_df = pd.read_excel(termbase_file)
-
-                    if 'source' not in termbase_df.columns or 'target' not in termbase_df.columns:
-                        st.error("Termbase Excel must contain 'source' and 'target' columns.")
-                    else:
-                        fixed_content, report = fix_terminology_and_consistency(xliff_content_str, termbase_df)
-                        st.success("QA check complete!")
-                        st.subheader("AI Correction Report")
-                        st.text_area("Report", report, height=200)
-
-                        st.download_button("Download Corrected File", fixed_content, f"fixed_{xliff_file.name}", "application/xml")
-
-# --- 3. MQXLIFF Hata Ayırıcı Aracı (YENİ EKLENDİ) ---
+# --- 2. MQXLIFF Error Splitter Tool ---
 elif tool_selection == "MQXLIFF Error Splitter":
     st.header("MQXLIFF Error Splitter")
     st.write("Splits an .mqxliff file into multiple smaller files based on error codes, then provides them in a single ZIP archive.")
@@ -102,7 +75,7 @@ elif tool_selection == "MQXLIFF Error Splitter":
         if st.button("Split File by Errors", key="mqxliff_split_button"):
             with st.spinner("Processing MQXLIFF and creating ZIP archive..."):
                 mqxliff_content_str = uploaded_file.getvalue().decode("utf-8")
-                zip_bytes, report = split_mqxliff_by_error(mqxliff_content_str)
+                zip_bytes, report = split_mqxliff_content(mqxliff_content_str)
                 
                 if zip_bytes:
                     st.success("File successfully split by error codes!")
@@ -117,3 +90,54 @@ elif tool_selection == "MQXLIFF Error Splitter":
                 else:
                     st.error(report)
 
+# --- 3. General QA Resolver ---
+elif tool_selection == "General QA Resolver":
+    st.header("General QA Resolver")
+    st.write("Automatically fixes common mechanical errors in text-based files.")
+
+    uploaded_file = st.file_uploader("Upload your text or XLIFF file", type=["txt", "xliff", "sdlxliff", "mqxliff"])
+    
+    st.subheader("Rules to Apply")
+    fix_spaces = st.checkbox("Condense consecutive spaces into a single space", value=True)
+    
+    if uploaded_file:
+        if st.button("Apply QA Fixes"):
+            options = {"fix_double_spaces": fix_spaces}
+            with st.spinner("Applying QA rules..."):
+                file_content_str = uploaded_file.getvalue().decode("utf-8")
+                resolved_content, report = run_full_qa(file_content_str, options)
+                st.success("Automated QA fixes complete!")
+                st.subheader("Changes Report")
+                st.text_area("Report", report, height=150)
+            st.download_button("Download Resolved File", resolved_content, f"qa_resolved_{uploaded_file.name}", "text/plain")
+
+# --- 4. Advanced QA Toolkit ---
+elif tool_selection == "Advanced QA Toolkit (AI)":
+    st.header("Advanced QA Toolkit (AI-Powered)")
+    st.write("Applies multiple QA checks sequentially, including AI-powered terminology fixing.")
+    
+    xliff_file = st.file_uploader("Upload your XLIFF file", type=["xliff", "sdlxliff", "mqxliff"])
+    termbase_file = st.file_uploader("Upload your Terminology file (.xlsx)", type=["xlsx"])
+    
+    if xliff_file and termbase_file:
+        if "OPENAI_API_KEY" not in st.secrets:
+            st.error("OpenAI API key is not configured in your Streamlit secrets.")
+        else:
+            if st.button("Run Advanced QA"):
+                with st.spinner("Running full QA suite with AI..."):
+                    xliff_content_str = xliff_file.getvalue().decode("utf-8")
+                    termbase_df = pd.read_excel(termbase_file)
+                    
+                    if 'source' not in termbase_df.columns or 'target' not in termbase_df.columns:
+                        st.error("Termbase Excel must contain 'source' and 'target' columns.")
+                    else:
+                        options = {
+                            "run_terminology_qa": True,
+                            "termbase_df": termbase_df
+                        }
+                        final_content, final_report = run_full_qa(xliff_content_str, options)
+                        st.success("Advanced QA complete!")
+                        st.subheader("Consolidated Report")
+                        st.text_area("Report", final_report, height=250)
+
+                    st.download_button("Download Final QA'd File", final_content, f"toolkit_qa_{xliff_file.name}", "application/xml")
