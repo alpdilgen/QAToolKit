@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Araçlarımızı tools klasöründen import ediyoruz
+# Bu importların çalışabilmesi için tools/__init__.py dosyasının var olması şarttır.
 from tools.tmx_cleaner_tool import clean_tmx_content
 from tools.mqxliff_splitter_tool import split_mqxliff_content
 from tools.qa_resolver_tool import resolve_qa_issues
@@ -126,13 +127,10 @@ elif tool_selection == "Gelişmiş QA Kiti":
 
     if main_file is not None:
         if st.button("Gelişmiş QA'i Başlat"):
-            # Terminoloji kontrolü için termbase içeriğini hazırla
             termbase_content = None
             if run_terminology and termbase_file:
-                # Örnek: pandas ile Excel okuma
-                # termbase_df = pd.read_excel(termbase_file)
-                # termbase_content = termbase_df.to_dict('records')
-                pass # Bu kısım sizin terminoloji fixer'ınıza göre doldurulmalı
+                # Gerçek uygulamada bu kısım termbase'i işleyecek
+                pass 
             
             toolkit_options = {
                 "run_general_qa": run_general,
