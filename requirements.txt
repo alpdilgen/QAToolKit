@@ -1,3 +1,11 @@
 streamlit
 pandas
 openpyxl
+openai
+lxml
+
+TMX Cleaner'ın anlamsal benzerlik analizi için:
+sentence-transformers
+
+Hata ayıklama ve kullanıcı arayüzü için:
+beautifulsoup4
